@@ -1,0 +1,6 @@
+firebase/serviceAccount.json
+.env
+node_modules
+package-lock.json
+.wwebjs_auth
+.wwebjs_cache
