@@ -3,11 +3,9 @@ const { cargarComandos } = require('../services/botService');
 const comandos = cargarComandos();
 const productosDB = require('../firebase/productos');
 const { crearLinkDePago } = require('../stripe/stripe');
-
 const { db } = require('../firebase/firebase');
-
-
-
+const { getHorarios } = require('../utils/getHorarios');
+const moment = require('moment');
 // Estados en memoria para clientes
 const estados = {}; // { '521234567890': 'esperando_producto' | 'esperando_confirmacion' }
 const carritos = {}; // { '521234567890': [{ nombre, cantidad, precio }] }
@@ -27,6 +25,43 @@ async function manejarMensaje(message, chatId, send, client) {
     }
     const esAdmin = OWNER_NUMBERS.includes(numero);
     console.log('Número:', numero, 'Texto:', texto, 'Es admin:', esAdmin);
+
+
+    if (!esAdmin) {
+      const { apertura, cierre, dias } = await getHorarios();
+      const [horaApertura] = apertura.split(':').map(Number);
+      const [horaCierre] = cierre.split(':').map(Number);
+      const horaActual = new Date().getHours();
+
+      // Obtener el día actual
+      const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+      const diaActual = diasSemana[new Date().getDay()];
+
+      // Verificar si es un día laborable
+      if (!dias.includes(diaActual)) {
+        const diasFormateados = dias.join(',');
+        const apertura12h = moment(apertura, 'HH:mm').format('hh:mm A');
+        const cierre12h = moment(cierre, 'HH:mm').format('hh:mm A');
+
+        return client.sendMessage(
+          message.from,
+          `⏰ No hay atención hoy.\nHorario: ${apertura12h} - ${cierre12h}\nDías: ${diasFormateados}`
+        );
+      }
+
+      // Verificar si está dentro del horario
+      if (horaActual < horaApertura || horaActual > horaCierre) {
+        const apertura12h = moment(apertura, 'HH:mm').format('hh:mm A');
+        const cierre12h = moment(cierre, 'HH:mm').format('hh:mm A');
+        const diasFormateados = dias.join(',');
+
+        return client.sendMessage(
+          message.from,
+          `⏰ Fuera de horario.\nHorario de atención: ${apertura12h} - ${cierre12h}\nDías: ${diasFormateados}`
+        );
+      }
+    }
+
 
     const [comandoRaw, ...argsRaw] = texto.split('|');
     const comandoNombre = comandoRaw.trim().toLowerCase();

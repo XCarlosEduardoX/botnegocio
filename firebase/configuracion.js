@@ -12,7 +12,7 @@ async function agregarMensajeBienvenida(mensaje) {
     }, { merge: true }); // Esto solo actualiza mensajeBienvenida y no toca otros campos
 }
 
-async function establecerHorarios(horaApertura, horaCierre) {
+async function establecerHorarios(horaApertura, horaCierre, dias) {
     const docRef = db.collection('negocios')
         .doc(BUSSINESS_NUMBER)
         .collection('configuracion')
@@ -21,11 +21,21 @@ async function establecerHorarios(horaApertura, horaCierre) {
     await docRef.set({
         horarios: {
             apertura: horaApertura,
-            cierre: horaCierre
+            cierre: horaCierre,
+            dias: dias
         }
-    }, { merge: true }); // Esto solo actualiza horarios y no toca otros campos
+    }, { merge: true });
 }
 
+async function establecerDireccion(direccion) {
+    const docRef = db.collection('negocios')
+        .doc(BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
 
+    await docRef.set({
+        direccion: direccion
+    }, { merge: true }); // Esto solo actualiza la dirección y no toca otros campos
+}
 
-module.exports = { agregarMensajeBienvenida, establecerHorarios };
+module.exports = { agregarMensajeBienvenida, establecerHorarios, establecerDireccion };

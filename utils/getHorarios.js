@@ -12,13 +12,15 @@ async function getHorarios() {
     if (!doc.exists) {
         return {
             apertura: '10:00',
-            cierre: '17:00'
+            cierre: '17:00',
+            dias: ['L', 'M', 'X', 'J', 'V']
         }
     } else {
         const configuracion = doc.data();
         return configuracion.horarios || {
             apertura: '10:00',
-            cierre: '17:00'
+            cierre: '17:00',
+            dias: ['L', 'M', 'X', 'J', 'V']
         };
     }
 }

@@ -2,7 +2,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { manejarMensaje } = require('./conversacionHandler');
 const { db } = require('../firebase/firebase');
-const { BUSSINESS_NUMBER } = require('../config');
+const { BUSSINESS_NUMBER, OWNER_NUMBERS } = require('../config');
 const { getHorarios } = require('../utils/getHorarios');
 const moment = require('moment');
 
@@ -18,21 +18,10 @@ client.on('ready', () => {
 // 2. Manejo de mensajes entrantes
 client.on('message', async (message) => {
   if (message.fromMe || message.from.includes('@g.us')) return;
-
-  const { apertura, cierre } = await getHorarios();
-  const [horaApertura] = apertura.split(':').map(Number);
-  const [horaCierre] = cierre.split(':').map(Number);
-  const horaActual = new Date().getHours();
-
-  if (horaActual < horaApertura || horaActual > horaCierre) {
-    const apertura12h = moment(apertura, 'HH:mm').format('hh:mm A');
-    const cierre12h = moment(cierre, 'HH:mm').format('hh:mm A');
-
-    return client.sendMessage(
-      message.from,
-      `⏰ Fuera de horario. Horario de atención: ${apertura12h} - ${cierre12h}`
-    );
-  }
+  // const esAdmin = OWNER_NUMBERS.includes(message.from);
+  // if (!esAdmin) {
+   
+  // }
 
   await manejarMensaje(
     message,
