@@ -222,17 +222,20 @@ async function manejarConfirmacionPago(texto, numero, send) {
   if (texto.includes('pagar')) {
     try {
 
-      const linkPago = await crearLinkDePago(carritos[numero]);
-      const pedidosDB = require('../firebase/pedidos');
-      await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], linkPago);
-      await send(`🔗 *Link de pago:* ${linkPago}\n\n` +
-        '⚠️ *Importante:*\n' +
-        '• Paga dentro de las próximas 24 horas.\n' +
-        '• Después de pagar, te enviaremos una confirmación.');
 
-      // Limpiar carrito y estado
-      carritos[numero] = [];
-      estados[numero] = null;
+      const pedidosDB = require('../firebase/pedidos');
+      await pedidosDB.guardarPedidoEnDB(numero, carritos[numero]).then(async docRef => {
+        const linkPago = await crearLinkDePago(carritos[numero], docRef.id, numero);
+        await send(`🔗 *Link de pago:* ${linkPago}\n\n` +
+          '⚠️ *Importante:*\n' +
+          '• Paga dentro de las próximas 24 horas.\n' +
+          '• Después de pagar, te enviaremos una confirmación.');
+
+        // Limpiar carrito y estado
+        carritos[numero] = [];
+        estados[numero] = null;
+
+      })
 
     } catch (error) {
       console.error('Error al generar pago:', error);

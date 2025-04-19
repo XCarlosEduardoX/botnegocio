@@ -2,12 +2,12 @@
 const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const crearLinkDePago = async (carrito) => {
+const crearLinkDePago = async (carrito, idPedido, numeroCliente) => {
     try {
         const line_items = carrito.map(producto => ({
             price_data: {
                 currency: 'mxn',
-                product_data: { 
+                product_data: {
                     name: producto.nombre,
                     // Opcional: añade más detalles como imágenes o descripción
                     // images: [producto.imagenUrl],
@@ -24,8 +24,9 @@ const crearLinkDePago = async (carrito) => {
             success_url: 'https://tutienda.com/pago-exitoso?session_id={CHECKOUT_SESSION_ID}',
             cancel_url: 'https://tutienda.com/pago-cancelado',
             metadata: { // Útil para identificar el pedido después
-                clienteId: '123', // Puedes pasar el número de WhatsApp aquí
-                carrito: JSON.stringify(carrito.map(item => `${item.nombre} x${item.cantidad}`))
+                cliente: numeroCliente,
+                carrito: JSON.stringify(carrito.map(item => `${item.nombre} x${item.cantidad}`)),
+                docId: idPedido, // ID del pedido en tu base de datos
             }
         });
 

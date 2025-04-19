@@ -1,7 +1,7 @@
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
-
+const { OWNER_NUMBERS } = require('../config');
 // Middleware para parsear el cuerpo raw
 router.post('/', express.raw({ type: 'application/json' }), async (req, res) => {
     const sig = req.headers['stripe-signature'];
@@ -39,13 +39,44 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
 
 // Función para manejar pagos exitosos
 async function handlePaymentSuccess(session) {
-    console.log('💰 Pago exitoso!');
-    console.log('📦 Pedido:', session.metadata);
+    const { cliente, docId } = session.metadata;
+    const numeroWhatsApp = `${cliente}@c.us`;
 
-    // Aquí puedes:
-    // 1. Actualizar tu base de datos
-    // 2. Enviar un mensaje al cliente (ej: vía WhatsApp)
-    // 3. Enviar un correo de confirmación
+    const mensajeConfirmacionCliente =
+        '✅ *¡Pago confirmado!*\n\n' +
+        `📦 Pedido: ${session.metadata.carrito}\n` +
+        'Gracias por tu compra.';
+
+    const mensajeConfirmacionNegocio = `✅ *¡Pago confirmado!*\n\n` +
+        `📦 Pedido: ${session.metadata.carrito}\n` +
+        `💳 Monto: $${(session.amount_total / 100).toFixed(2)}\n` +
+        `🛒 Cliente: +${cliente}\n` +
+        `🛍️ ID de pedido: ${docId}`;
+
+
+    try {
+        // 1. Agregar a cola
+        const mensajesDB = require('../firebase/mensajes');
+        await mensajesDB.agregarMensajeEnCola({
+            numero: numeroWhatsApp,
+            mensaje: mensajeConfirmacionCliente
+        });
+
+        // 2. Enviar mensaje a negocio
+        for (const numero of OWNER_NUMBERS) {
+            await mensajesDB.agregarMensajeEnCola({
+                numero: numero,
+                mensaje: mensajeConfirmacionNegocio
+            });
+        }
+        // 2. Actualizar estado en Firebase
+        const pedidosDB = require('../firebase/pedidos');
+        await pedidosDB.actualizarEstatusPedido(docId, 'pagado');
+
+        console.log('✅ Procesamiento exitoso');
+    } catch (error) {
+        console.error('Error en handlePaymentSuccess:', error);
+    }
 }
 
 module.exports = router;
