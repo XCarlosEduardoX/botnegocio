@@ -7,6 +7,7 @@ module.exports = {
         if (!args) return send(
             'Usa: horarios | días | hora inicio | hora fin\n' +
             'Ejemplo: horarios | L,M,X,J,V | 09:00 | 18:00\n' +
+            'Para días específicos: horarios | S,D | 11:00 | 13:00\n' +
             'L=Lunes, M=Martes, X=Miércoles, J=Jueves, V=Viernes, S=Sábado, D=Domingo'
         );
 
@@ -36,11 +37,32 @@ module.exports = {
 
         const configuracionDB = require('../../firebase/configuracion');
 
-        await configuracionDB.establecerHorarios(horaApertura, horaCierre, diasIngresados);
-        return send(
-            '✅ Horarios establecidos correctamente:\n' +
-            `📅 Días: ${diasIngresados.join(',')}\n` +
-            `⏰ Horario: ${horaApertura} - ${horaCierre}`
-        );
+        // Obtener horarios actuales antes de actualizar
+        const horariosActuales = await configuracionDB.obtenerHorarios() || {};
+
+        // Crear objeto con los nuevos horarios para los días especificados
+        const nuevosHorarios = {};
+        diasIngresados.forEach(dia => {
+            nuevosHorarios[dia] = {
+                apertura: horaApertura,
+                cierre: horaCierre
+            };
+        });
+
+        // Combinar horarios actuales con nuevos
+        const horariosActualizados = {
+            ...horariosActuales,
+            ...nuevosHorarios
+        };
+
+        await configuracionDB.establecerHorarios(horariosActualizados);
+
+        // Crear mensaje de confirmación
+        let mensaje = '✅ Horarios establecidos correctamente:\n\n';
+        diasIngresados.forEach(dia => {
+            mensaje += `📅 ${dia}: ${horaApertura} - ${horaCierre}\n`;
+        });
+
+        return send(mensaje);
     }
 };

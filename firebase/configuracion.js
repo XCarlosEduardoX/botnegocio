@@ -26,6 +26,30 @@ async function establecerHorarios(horaApertura, horaCierre, dias) {
         }
     }, { merge: true });
 }
+async function obtenerHorarios() {
+    const docRef = db.collection('negocios')
+        .doc(BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
+
+    const doc = await docRef.get();
+    if (!doc.exists) return null;
+    
+    return doc.data().horarios || null;
+}
+
+// Modificar la función establecerHorarios existente para que acepte un objeto completo
+async function establecerHorarios(horarios) {
+    const docRef = db.collection('negocios')
+        .doc(BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
+
+    await docRef.set({
+        horarios: horarios
+    }, { merge: true });
+}
+
 
 async function establecerDireccion(direccion) {
     const docRef = db.collection('negocios')
@@ -38,4 +62,14 @@ async function establecerDireccion(direccion) {
     }, { merge: true }); // Esto solo actualiza la dirección y no toca otros campos
 }
 
-module.exports = { agregarMensajeBienvenida, establecerHorarios, establecerDireccion };
+
+async function establecerTiposEntrega(tipos) {
+    const negocioRef = db.collection('negocios').doc(BUSSINESS_NUMBER);
+    const configRef = negocioRef.collection('configuracion').doc('configuracion');
+
+    await configRef.set({
+        tiposEntrega: tipos
+    }, { merge: true });
+}
+
+module.exports = { agregarMensajeBienvenida, establecerHorarios, establecerDireccion, establecerTiposEntrega, obtenerHorarios };
