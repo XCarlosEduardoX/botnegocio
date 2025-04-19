@@ -8,32 +8,22 @@ const docRef = db.collection('negocios')
 
 async function getHorarios() {
     const doc = await docRef.get();
-    const diaActual = obtenerDiaActual();
 
     if (!doc.exists) {
         return getHorariosPorDefecto();
     }
 
     const configuracion = doc.data();
-    const horarios = configuracion.horarios || {};
-
-    // Si existe un horario específico para el día actual, usarlo
-    if (horarios[diaActual]) {
-        return {
-            apertura: horarios[diaActual].apertura,
-            cierre: horarios[diaActual].cierre,
-            dias: Object.keys(horarios) // Retorna todos los días configurados
-        };
-    }
-
-    return getHorariosPorDefecto();
+    return configuracion.horarios || getHorariosPorDefecto();
 }
 
 function getHorariosPorDefecto() {
     return {
-        apertura: '10:00',
-        cierre: '17:00',
-        dias: ['L', 'M', 'X', 'J', 'V']
+        'L': { apertura: '10:00', cierre: '17:00' },
+        'M': { apertura: '10:00', cierre: '17:00' },
+        'X': { apertura: '10:00', cierre: '17:00' },
+        'J': { apertura: '10:00', cierre: '17:00' },
+        'V': { apertura: '10:00', cierre: '17:00' }
     };
 }
 

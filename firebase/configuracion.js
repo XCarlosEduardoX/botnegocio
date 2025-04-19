@@ -34,7 +34,7 @@ async function obtenerHorarios() {
 
     const doc = await docRef.get();
     if (!doc.exists) return null;
-    
+
     return doc.data().horarios || null;
 }
 
@@ -71,5 +71,26 @@ async function establecerTiposEntrega(tipos) {
         tiposEntrega: tipos
     }, { merge: true });
 }
+async function obtenerEstadoTemporal() {
+    const docRef = db.collection('negocios')
+        .doc(BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
 
-module.exports = { agregarMensajeBienvenida, establecerHorarios, establecerDireccion, establecerTiposEntrega, obtenerHorarios };
+    const doc = await docRef.get();
+    if (!doc.exists) return false;
+
+    return doc.data().cerradoTemporalmente || false;
+}
+
+async function establecerEstadoTemporal(estado) {
+    const docRef = db.collection('negocios')
+        .doc(BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
+
+    await docRef.set({
+        cerradoTemporalmente: estado
+    }, { merge: true });
+}
+module.exports = { agregarMensajeBienvenida, establecerHorarios, establecerDireccion, establecerTiposEntrega, obtenerHorarios, obtenerEstadoTemporal, establecerEstadoTemporal };

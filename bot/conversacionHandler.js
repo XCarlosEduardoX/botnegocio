@@ -32,53 +32,63 @@ async function manejarMensaje(message, chatId, send, client) {
       const diaActual = diasSemana[new Date().getDay()];
       const horaActual = new Date().getHours();
       const minutosActual = new Date().getMinutes();
-      
-      // Obtener horarios del día actual
+
+      // Obtener horarios
       const horarios = await getHorarios();
-      
+
       // Verificar si hay horario para el día actual
       if (!horarios[diaActual]) {
-        // Crear mensaje con todos los horarios disponibles
+        const ordenDias = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
         let mensajeHorarios = '📅 *Horarios de atención:*\n\n';
-        Object.entries(horarios).forEach(([dia, horario]) => {
-          const apertura12h = moment(horario.apertura, 'HH:mm').format('hh:mm A');
-          const cierre12h = moment(horario.cierre, 'HH:mm').format('hh:mm A');
-          mensajeHorarios += `${dia}: ${apertura12h} - ${cierre12h}\n`;
+
+        ordenDias.forEach(dia => {
+          if (horarios[dia]) {
+            const apertura12h = moment(horarios[dia].apertura, 'HH:mm').format('hh:mm A');
+            const cierre12h = moment(horarios[dia].cierre, 'HH:mm').format('hh:mm A');
+            mensajeHorarios += `${dia}: ${apertura12h} - ${cierre12h}\n`;
+          }
         });
-    
+
         return client.sendMessage(
           message.from,
           `⏰ No hay atención hoy.\n\n${mensajeHorarios}`
         );
       }
-    
-      // Obtener horario del día actual
+
+      // Si hay horario para el día actual, verificar si está dentro del horario
       const horarioDia = horarios[diaActual];
       const [horaApertura, minutosApertura] = horarioDia.apertura.split(':').map(Number);
       const [horaCierre, minutosCierre] = horarioDia.cierre.split(':').map(Number);
-    
-      // Convertir todo a minutos para comparación más precisa
+
       const tiempoActual = horaActual * 60 + minutosActual;
       const tiempoApertura = horaApertura * 60 + minutosApertura;
       const tiempoCierre = horaCierre * 60 + minutosCierre;
-    
-      // Verificar si está dentro del horario
+
+      // En conversacionHandler.js, modifica la parte donde se construye el mensaje de horarios:
+
       if (tiempoActual < tiempoApertura || tiempoActual > tiempoCierre) {
+        // Definir el orden correcto de los días
+        const ordenDias = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
         // Crear mensaje con todos los horarios disponibles
         let mensajeHorarios = '📅 *Horarios de atención:*\n\n';
-        Object.entries(horarios).forEach(([dia, horario]) => {
-          const apertura12h = moment(horario.apertura, 'HH:mm').format('hh:mm A');
-          const cierre12h = moment(horario.cierre, 'HH:mm').format('hh:mm A');
-          mensajeHorarios += `${dia}: ${apertura12h} - ${cierre12h}\n`;
+
+        // Iterar sobre el orden definido de los días
+        ordenDias.forEach(dia => {
+          if (horarios[dia]) {
+            const apertura12h = moment(horarios[dia].apertura, 'HH:mm').format('hh:mm A');
+            const cierre12h = moment(horarios[dia].cierre, 'HH:mm').format('hh:mm A');
+            mensajeHorarios += `${dia}: ${apertura12h} - ${cierre12h}\n`;
+          }
         });
-    
+
         return client.sendMessage(
           message.from,
           `⏰ Fuera de horario.\n\n${mensajeHorarios}`
         );
       }
     }
-
     const [comandoRaw, ...argsRaw] = texto.split('|');
     const comandoNombre = comandoRaw.trim().toLowerCase();
     const args = argsRaw.join('|').trim();
