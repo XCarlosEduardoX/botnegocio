@@ -18,7 +18,7 @@ client.on('message', async (message) => {
   if (message.fromMe) return;
   const isGroup = message.from.includes('@g.us');
   if (isGroup) return;
-  await manejarMensaje(message, message.from, (msg) => client.sendMessage(message.from, msg));
+  await manejarMensaje(message, message.from, (msg) => client.sendMessage(message.from, msg), client);
 });
 
 // 3. Procesar mensajes pendientes desde Firebase

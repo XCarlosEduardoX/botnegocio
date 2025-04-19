@@ -7,13 +7,14 @@ const { crearLinkDePago } = require('../stripe/stripe');
 const { db } = require('../firebase/firebase');
 
 
+
 // Estados en memoria para clientes
 const estados = {}; // { '521234567890': 'esperando_producto' | 'esperando_confirmacion' }
 const carritos = {}; // { '521234567890': [{ nombre, cantidad, precio }] }
+const mensajesPineados = {}; // { '521234567890': messageId }
 
 
-
-async function manejarMensaje(message, chatId, send) {
+async function manejarMensaje(message, chatId, send, client) {
   try {
     const texto = message.body.trim();
     const numero = chatId.replace('@c.us', '');
@@ -21,6 +22,7 @@ async function manejarMensaje(message, chatId, send) {
       return manejarConfirmacionPago(texto, numero, send); // Nueva función específica
     }
     const esAdmin = OWNER_NUMBERS.includes(numero);
+    console.log('Número:', numero, 'Texto:', texto, 'Es admin:', esAdmin);
 
     const [comandoRaw, ...argsRaw] = texto.split('|');
     const comandoNombre = comandoRaw.trim().toLowerCase();
@@ -34,7 +36,7 @@ async function manejarMensaje(message, chatId, send) {
     }
 
     if (!esAdmin) {
-      return manejarCliente(message, numero, send);
+      return manejarCliente(message, numero, send, client);
     }
 
     send('❌ Comando no reconocido.');
@@ -44,7 +46,7 @@ async function manejarMensaje(message, chatId, send) {
   }
 }
 
-async function manejarCliente(message, chatId, send) {
+async function manejarCliente(message, chatId, send, client) {
   const numero = chatId.replace('@c.us', '');
   const texto = message.body.trim().toLowerCase();
 
@@ -52,7 +54,7 @@ async function manejarCliente(message, chatId, send) {
   if (estados[numero]) {
     switch (estados[numero]) {
       case 'esperando_producto':
-        return await manejarSeleccionProducto(texto, numero, send);
+        return await manejarSeleccionProducto(texto, numero, send, client);
       case 'esperando_confirmacion':
         return await manejarConfirmacionCompra(texto, numero, send);
     }
@@ -78,7 +80,7 @@ async function enviarListaDeProductos(numero, send) {
 
 
 
-async function manejarSeleccionProducto(texto, numero, send) {
+async function manejarSeleccionProducto(texto, numero, send, client) {
   const productos = await productosDB.obtenerProductos();
   const textoLimpio = texto.trim().toLowerCase();
 
@@ -143,6 +145,44 @@ async function manejarSeleccionProducto(texto, numero, send) {
     cantidad: cantidad,
     precio: producto.precio
   });
+
+
+
+
+  // Quitar pin del mensaje anterior
+  if (mensajesPineados[numero]) {
+    try {
+      const mensajeAnterior = await client.getMessageById(mensajesPineados[numero]);
+      if (mensajeAnterior) {
+        await mensajeAnterior.unpin();
+      } else {
+        console.warn('Mensaje anterior no encontrado');
+      }
+    } catch (error) {
+      console.error('Error al quitar pin del mensaje anterior:', error);
+    }
+  }
+
+
+  // Crear resumen del carrito
+  let resumenCarrito = '🛒 *Carrito actual:*\n\n';
+  carritos[numero].forEach((item, index) => {
+    const subtotal = item.precio * item.cantidad;
+    resumenCarrito += `${index + 1}. ${item.nombre} x${item.cantidad} = $${subtotal}\n`;
+  });
+  resumenCarrito += `\n💵 *Total: $${carritos[numero].reduce((acc, item) => acc + (item.precio * item.cantidad), 0)}*`;
+
+  // Enviar y pinear nuevo mensaje
+  const nuevoMensaje = await send(`${resumenCarrito}`);
+
+  try {
+    await nuevoMensaje.pin();
+    mensajesPineados[numero] = nuevoMensaje.id._serialized || nuevoMensaje.id;
+  } catch (error) {
+    console.error('Error al pinear el mensaje:', error);
+  }
+
+
 
   estados[numero] = 'esperando_confirmacion';
   return send('✅ Producto agregado al carrito. ¿Quieres terminar o agregar más?\nEscribe *agregar* o *terminar*');
