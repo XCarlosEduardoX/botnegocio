@@ -2,7 +2,7 @@ module.exports = {
     name: 'agregar producto',
     adminOnly: true,
 
-    async execute({ args, numeroNegocio, send }) {
+    async execute({ args, send }) {
         console.log(args);
         const [nombreRaw, precioRaw] = args.split('|').map(p => p.trim());
         if (!nombreRaw || !precioRaw) return send('Usa: agregar producto | nombre | precio');

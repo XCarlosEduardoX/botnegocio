@@ -2,7 +2,7 @@ module.exports = {
     name: 'eliminar producto',
     adminOnly: true,
   
-    async execute({ args, numeroNegocio, send }) {
+    async execute({ args, send }) {
       const nombre = args.trim();
       if (!nombre) return send('Usa: eliminar producto | nombre');
   

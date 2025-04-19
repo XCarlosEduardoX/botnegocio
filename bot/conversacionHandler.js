@@ -18,7 +18,7 @@ async function manejarMensaje(message, chatId, send) {
       return send('🚫 No tienes permiso para usar este comando.');
     }
 
-    return await comando.execute({ args, numeroNegocio: BUSSINESS_NUMBER, send });
+    return await comando.execute({ args, send });
   }
 
   // Si no es comando, sigue con el flujo cliente

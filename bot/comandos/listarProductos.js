@@ -2,7 +2,7 @@ module.exports = {
     name: 'listar productos',
     adminOnly: true,
   
-    async execute({ numeroNegocio, send }) {
+    async execute({ send }) {
       const productosDB = require('../../firebase/productos');
       const productos = await productosDB.obtenerProductos();
   
