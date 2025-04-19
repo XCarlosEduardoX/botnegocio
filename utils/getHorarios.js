@@ -6,17 +6,23 @@ const docRef = db.collection('negocios')
     .collection('configuracion')
     .doc('configuracion');
 
-async function getWelcomeMessage() {
+async function getHorarios() {
     const doc = await docRef.get();
 
     if (!doc.exists) {
-        return '¡Hola! Bienvenido a nuestro negocio.';
+        return {
+            apertura: '10:00',
+            cierre: '17:00'
+        }
     } else {
         const configuracion = doc.data();
-        return configuracion.mensajeBienvenida || '¡Hola! Bienvenido a nuestro negocio.';
+        return configuracion.horarios || {
+            apertura: '10:00',
+            cierre: '17:00'
+        };
     }
 }
 
 module.exports = {
-    getWelcomeMessage
+    getHorarios
 };

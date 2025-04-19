@@ -3,6 +3,7 @@ const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const crearLinkDePago = async (carrito, idPedido, numeroCliente) => {
+    console.log('numeroCliente:', numeroCliente);
     try {
         const line_items = carrito.map(producto => ({
             price_data: {
@@ -18,7 +19,7 @@ const crearLinkDePago = async (carrito, idPedido, numeroCliente) => {
         }));
 
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
+            payment_method_types: ['card', 'oxxo',],
             line_items,
             mode: 'payment',
             success_url: 'https://tutienda.com/pago-exitoso?session_id={CHECKOUT_SESSION_ID}',

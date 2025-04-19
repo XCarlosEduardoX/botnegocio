@@ -3,6 +3,8 @@ const qrcode = require('qrcode-terminal');
 const { manejarMensaje } = require('./conversacionHandler');
 const { db } = require('../firebase/firebase');
 const { BUSSINESS_NUMBER } = require('../config');
+const { getHorarios } = require('../utils/getHorarios');
+const moment = require('moment');
 
 const client = new Client({ authStrategy: new LocalAuth() });
 
@@ -15,41 +17,62 @@ client.on('ready', () => {
 
 // 2. Manejo de mensajes entrantes
 client.on('message', async (message) => {
-  if (message.fromMe) return;
-  const isGroup = message.from.includes('@g.us');
-  if (isGroup) return;
-  await manejarMensaje(message, message.from, (msg) => client.sendMessage(message.from, msg), client);
+  if (message.fromMe || message.from.includes('@g.us')) return;
+
+  const { apertura, cierre } = await getHorarios();
+  const [horaApertura] = apertura.split(':').map(Number);
+  const [horaCierre] = cierre.split(':').map(Number);
+  const horaActual = new Date().getHours();
+
+  if (horaActual < horaApertura || horaActual > horaCierre) {
+    const apertura12h = moment(apertura, 'HH:mm').format('hh:mm A');
+    const cierre12h = moment(cierre, 'HH:mm').format('hh:mm A');
+
+    return client.sendMessage(
+      message.from,
+      `⏰ Fuera de horario. Horario de atención: ${apertura12h} - ${cierre12h}`
+    );
+  }
+
+  await manejarMensaje(
+    message,
+    message.from,
+    (msg) => client.sendMessage(message.from, msg),
+    client
+  );
 });
 
 // 3. Procesar mensajes pendientes desde Firebase
 async function procesarMensajesPendientes() {
   try {
-    const mensajesSnapshot = await db.collection('negocios').doc(BUSSINESS_NUMBER).collection('mensajes_pendientes')
+    const snapshot = await db
+      .collection('negocios')
+      .doc(BUSSINESS_NUMBER)
+      .collection('mensajes_pendientes')
       .where('status', '==', 'pendiente')
-      .limit(10) // Procesa 10 mensajes por ciclo
+      .limit(10)
       .get();
 
-    if (mensajesSnapshot.empty) {
-      console.log('No hay mensajes pendientes.');
-      return;
-    }
+    if (snapshot.empty) return;
 
-    mensajesSnapshot.forEach(async (doc) => {
-      const mensaje = doc.data();
+    const procesos = snapshot.docs.map(async (doc) => {
+      const { numero, mensaje } = doc.data();
       try {
-        await client.sendMessage(mensaje.numero, mensaje.mensaje);
+        await client.sendMessage(numero, mensaje);
         await doc.ref.update({
           status: 'enviado',
           enviadoEl: new Date().toISOString(),
         });
-        console.log(`✅ Mensaje enviado a ${mensaje.numero}`);
+        console.log(`✅ Mensaje enviado a ${numero}`);
       } catch (error) {
-        console.error(`❌ Error al enviar a ${mensaje.numero}:`, error.message);
+        console.error(`❌ Error al enviar a ${numero}:`, error.message);
         await manejarErrorEnvio(doc.ref, error);
       }
     });
+
+    await Promise.all(procesos);
   } catch (error) {
-    console.error('Error en procesarMensajesPendientes:', error);
+    console.error('❌ Error general en procesarMensajesPendientes:', error);
   }
 }
 

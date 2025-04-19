@@ -2,6 +2,9 @@ const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
 const { OWNER_NUMBERS } = require('../config');
+const pedidosDB = require('../firebase/pedidos');
+const moment = require('moment');
+require('moment/locale/es'); // Cargar idioma español
 // Middleware para parsear el cuerpo raw
 router.post('/', express.raw({ type: 'application/json' }), async (req, res) => {
     const sig = req.headers['stripe-signature'];
@@ -20,8 +23,10 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
     }
 
     // 2. Maneja eventos relevantes
+
     switch (event.type) {
-        case 'checkout.session.completed':
+        case 'payment_intent.succeeded':
+        case 'checkout.session.async_payment_succeeded':
             const session = event.data.object;
             await handlePaymentSuccess(session);
             break;
@@ -30,8 +35,17 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
             console.log('❌ Pago expirado:', event.data.object.id);
             break;
 
+        case 'payment_intent.requires_action':
+            const paymentData = event.data.object;
+            console.log('Pago requiere acción:', paymentData);
+            if (paymentData.payment_method_types[0] === 'oxxo' && paymentData.status === 'requires_action') {
+                await handleOxxoPayment(paymentData);
+            }
+            break;
+
         default:
-            console.log(`🔔 Evento no manejado: ${event.type}`);
+            // Puede agregar un registro o mensaje para los tipos no manejados
+            console.log('Evento no manejado:', event.type);
     }
 
     res.status(200).json({ received: true });
@@ -55,6 +69,7 @@ async function handlePaymentSuccess(session) {
 
 
     try {
+        await pedidosDB.actualizarEstatusPedido(docId, 'pagado');
         // 1. Agregar a cola
         const mensajesDB = require('../firebase/mensajes');
         await mensajesDB.agregarMensajeEnCola({
@@ -70,13 +85,40 @@ async function handlePaymentSuccess(session) {
             });
         }
         // 2. Actualizar estado en Firebase
-        const pedidosDB = require('../firebase/pedidos');
-        await pedidosDB.actualizarEstatusPedido(docId, 'pagado');
+
 
         console.log('✅ Procesamiento exitoso');
     } catch (error) {
         console.error('Error en handlePaymentSuccess:', error);
     }
+}
+
+async function handleOxxoPayment(paymentData) {
+    const { cliente } = paymentData.metadata;
+    console.log('Cliente Oxxo:', cliente);
+
+
+    const voucher_url = paymentData.next_action?.oxxo_display_details?.hosted_voucher_url; // Optional chaining
+    console.log('Voucher URL:', voucher_url);
+    const expire_days = paymentData.payment_method_options?.oxxo?.expires_after_days; // Optional chaining
+    console.log('Días de expiración:', expire_days);
+    if (!voucher_url || !expire_days) {
+        console.error("Missing Oxxo payment details:", paymentData);
+        return;
+    }
+    const expire_date = moment().add(expire_days, 'days').locale('es').format('LL'); // Ej: 23 de abril de 2025
+    console.log('Expira el:', expire_date);
+    // 1. Agregar a cola    
+    const mensajesDB = require('../firebase/mensajes');
+    await mensajesDB.agregarMensajeEnCola({
+        numero: cliente,
+        mensaje: `🔔 Pago con Oxxo.
+        Tu voucher está disponible en el siguiente enlace: ${voucher_url}
+        El pago expirará el ${expire_date}.
+
+        La confirmación del pago puede tardar hasta 2 días. Si no recibes la confirmación, por favor contacta al negocio.  
+        `
+    });
 }
 
 module.exports = router;
