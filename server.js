@@ -1,9 +1,16 @@
 require('dotenv').config();
-require('./bot/index'); // Inicia el bot de WhatsApp
+const express = require('express');
+const app = express();
 
-// Si tienes Stripe webhook, lo importas aquí y lo montas con Express
-// const express = require('express');
-// const webhook = require('./stripe/webhook');
-// const app = express();
-// app.use('/webhook', webhook);
-// app.listen(3000);
+// Inicia tu bot de WhatsApp
+require('./bot/index');
+
+// Configura el webhook de Stripe
+const webhook = require('./stripe/webhook');
+app.use('/webhook', webhook);
+
+// Inicia el servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor webhook escuchando en puerto ${PORT}`);
+});
