@@ -1,5 +1,4 @@
 const { db } = require('./firebase');
-const { BUSSINESS_NUMBER } = require('../config');
 const cache = require('../utils/cache');
 
 const CACHE_KEY_PRODUCTOS = 'productos';
@@ -15,7 +14,7 @@ function slugify(texto) {
 }
 
 async function agregarProducto({ nombre, precio, stock = 1 }) {
-    const ref = db.collection('negocios').doc(BUSSINESS_NUMBER).collection('productos');
+    const ref = db.collection('negocios').doc(process.env.BUSSINESS_NUMBER).collection('productos');
     const id = slugify(nombre);
     const docRef = ref.doc(id);
     const doc = await docRef.get();
@@ -34,7 +33,7 @@ async function agregarProducto({ nombre, precio, stock = 1 }) {
 
 
 async function eliminarProducto({ nombre }) {
-    const ref = db.collection('negocios').doc(BUSSINESS_NUMBER).collection('productos');
+    const ref = db.collection('negocios').doc(process.env.BUSSINESS_NUMBER).collection('productos');
     const id = slugify(nombre);
     const docRef = ref.doc(id);
     const doc = await docRef.get();
@@ -56,7 +55,7 @@ async function obtenerProductos() {
 
     // Si no está en caché, obtener de Firestore
     console.log('Obteniendo productos desde Firestore');
-    const ref = db.collection('negocios').doc(BUSSINESS_NUMBER).collection('productos');
+    const ref = db.collection('negocios').doc(process.env.BUSSINESS_NUMBER).collection('productos');
     const snap = await ref.get();
     const productos = snap.docs.map(doc => doc.data());
 
@@ -68,7 +67,7 @@ async function obtenerProductos() {
 
 // 🔄 Actualizar un producto existente
 
-async function actualizarProducto(id, data, numeroNegocio = BUSSINESS_NUMBER) {
+async function actualizarProducto(id, data, numeroNegocio = process.env.BUSSINESS_NUMBER) {
     const productoRef = db.collection('negocios').doc(numeroNegocio).collection('productos').doc(id);
     await productoRef.update(data);
 

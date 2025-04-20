@@ -1,9 +1,8 @@
 const { db } = require('./firebase');
-const { BUSSINESS_NUMBER } = require('../config');
 
 async function agregarMensajeBienvenida(mensaje) {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 
@@ -14,7 +13,7 @@ async function agregarMensajeBienvenida(mensaje) {
 
 async function establecerHorarios(horaApertura, horaCierre, dias) {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 
@@ -28,7 +27,7 @@ async function establecerHorarios(horaApertura, horaCierre, dias) {
 }
 async function obtenerHorarios() {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 
@@ -41,7 +40,7 @@ async function obtenerHorarios() {
 // Modificar la función establecerHorarios existente para que acepte un objeto completo
 async function establecerHorarios(horarios) {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 
@@ -53,7 +52,7 @@ async function establecerHorarios(horarios) {
 
 async function establecerDireccion(direccion) {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 
@@ -64,7 +63,7 @@ async function establecerDireccion(direccion) {
 
 
 async function establecerTiposEntrega(tipos) {
-    const negocioRef = db.collection('negocios').doc(BUSSINESS_NUMBER);
+    const negocioRef = db.collection('negocios').doc(process.env.BUSSINESS_NUMBER);
     const configRef = negocioRef.collection('configuracion').doc('configuracion');
 
     await configRef.set({
@@ -73,7 +72,7 @@ async function establecerTiposEntrega(tipos) {
 }
 async function obtenerEstadoTemporal() {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 
@@ -85,7 +84,7 @@ async function obtenerEstadoTemporal() {
 
 async function establecerEstadoTemporal(estado) {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 
@@ -96,7 +95,7 @@ async function establecerEstadoTemporal(estado) {
 
 async function establecerDatosTransferencia(datos) {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 
@@ -108,7 +107,7 @@ async function establecerDatosTransferencia(datos) {
 //obtener datos de transferencia
 async function obtenerDatosTransferencia() {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('configuracion')
         .doc('configuracion');
 

@@ -1,10 +1,9 @@
 // firebase/conversacionEstados.js
 const { db } = require('./firebase');
-const { BUSSINESS_NUMBER } = require('../config');
 
 async function guardarEstadoConversacion(numero, estado, carrito) {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('conversaciones')
         .doc(numero);
 
@@ -20,7 +19,7 @@ async function guardarEstadoConversacion(numero, estado, carrito) {
 
 async function recuperarEstadoConversacion(numero) {
     const docRef = db.collection('negocios')
-        .doc(BUSSINESS_NUMBER)
+        .doc(process.env.BUSSINESS_NUMBER)
         .collection('conversaciones')
         .doc(numero);
 

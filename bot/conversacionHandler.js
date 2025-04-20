@@ -1,4 +1,4 @@
-const { OWNER_NUMBERS, BUSSINESS_NUMBER } = require('../config');
+const { OWNER_NUMBERS } = require('../config');
 const { cargarComandos } = require('../services/botService');
 const comandos = cargarComandos();
 const productosDB = require('../firebase/productos');
@@ -43,7 +43,7 @@ async function manejarMensaje(message, chatId, send, client) {
         carritos[numero] = estadoGuardado.carrito || [];
       } else {
         // Si no hay estado guardado, inicializar con valores por defecto
-        estados[numero] = 'esperando_producto';
+        estados[numero] = '';
         carritos[numero] = [];
         // Guardar estado inicial en Firebase
         await guardarEstadoConversacion(numero, estados[numero], carritos[numero]);
@@ -142,7 +142,12 @@ async function manejarMensaje(message, chatId, send, client) {
       if (comandos[comandoNombre].adminOnly && !esAdmin) {
         return send('🚫 No tienes permiso para usar este comando.');
       }
-      return await comandos[comandoNombre].execute({ args, send });
+      return await comandos[comandoNombre].execute({
+        args,
+        send,
+        message,  // Agregar el objeto message
+        client    // También podría ser útil pasar el cliente
+      });
     }
     await guardarEstadoConversacion(numero, estados[numero], carritos[numero]);
 

@@ -2,7 +2,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { manejarMensaje } = require('./conversacionHandler');
 const { db } = require('../firebase/firebase');
-const { BUSSINESS_NUMBER, OWNER_NUMBERS } = require('../config');
+const { OWNER_NUMBERS } = require('../config');
 const { getCierreTemporal } = require('../utils/getCierreTemporal');
 const cron = require('node-cron');
 global.estados = {};
@@ -18,13 +18,14 @@ client.on('qr', qr => {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qr)}`;
   console.log('🔗 Escanea el código QR aquí:');
   console.log(qrUrl);
-  open(qrUrl); // abre el navegador automáticamente
+  let uri = encodeURI(qrUrl);
+  open(uri); // abre el navegador automáticamente
 }); client.on('ready', async () => {
   console.log('Bot listo ✅');
   try {
     const conversacionesRef = db
       .collection('negocios')
-      .doc(BUSSINESS_NUMBER)
+      .doc(process.env.BUSSINESS_NUMBER)
       .collection('conversaciones');
 
     const snapshot = await conversacionesRef.get();
@@ -67,7 +68,7 @@ async function limpiarEstadosAntiguos() {
   try {
     const snapshot = await db
       .collection('negocios')
-      .doc(BUSSINESS_NUMBER)
+      .doc(process.env.process.env.BUSSINESS_NUMBER)
       .collection('conversaciones')
       .where('ultimaActualizacion', '<', limiteTiempo)
       .get();
@@ -125,7 +126,7 @@ async function procesarMensajesPendientes() {
   try {
     const snapshot = await db
       .collection('negocios')
-      .doc(BUSSINESS_NUMBER)
+      .doc(process.env.BUSSINESS_NUMBER)
       .collection('mensajes_pendientes')
       .where('status', '==', 'pendiente')
       .limit(10)

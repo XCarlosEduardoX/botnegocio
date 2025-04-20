@@ -1,11 +1,10 @@
 // En tu archivo ../firebase/mensajes.js
 const admin = require('firebase-admin');
 const db = admin.firestore();
-const { BUSSINESS_NUMBER } = require('../config');
 
 const agregarMensajeEnCola = async (mensajeData) => {
     try {
-        const docRef = await db.collection('negocios').doc(BUSSINESS_NUMBER).collection('mensajes_pendientes').add({
+        const docRef = await db.collection('negocios').doc(process.env.BUSSINESS_NUMBER).collection('mensajes_pendientes').add({
             numero: mensajeData.numero,       // Ej: "5214775579264@c.us"
             mensaje: mensajeData.mensaje,     // Contenido del mensaje
             status: 'pendiente',              // Estado del mensaje

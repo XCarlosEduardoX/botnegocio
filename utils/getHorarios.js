@@ -1,8 +1,8 @@
 const { db } = require('../firebase/firebase');
-const { BUSSINESS_NUMBER } = require('../config');
+require('dotenv').config();
 
 const docRef = db.collection('negocios')
-    .doc(BUSSINESS_NUMBER)
+    .doc(process.env.BUSSINESS_NUMBER)
     .collection('configuracion')
     .doc('configuracion');
 
