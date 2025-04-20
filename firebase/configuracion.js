@@ -117,6 +117,39 @@ async function obtenerDatosTransferencia() {
     return doc.data().datosTransferencia || null;
 }
 
+async function establecerNombreNegocio(nombre) {
+    const docRef = db.collection('negocios')
+        .doc(process.env.BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
+
+    await docRef.set({
+        nombreNegocio: nombre
+    }, { merge: true });
+}
+async function establecerPropietario(numero) {
+    const docRef = db.collection('negocios')
+        .doc(process.env.BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
+
+    await docRef.set({
+        propietarios: [numero] // Solo guarda un número en la posición 0
+    }, { merge: true });
+}
+
+
+async function obtenerPropietarios() {
+    const docRef = db.collection('negocios')
+        .doc(process.env.BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
+
+    const doc = await docRef.get();
+    if (!doc.exists) return [];
+
+    return doc.data().propietarios || [];
+}
 module.exports = {
     agregarMensajeBienvenida,
     establecerHorarios,
@@ -126,5 +159,8 @@ module.exports = {
     obtenerEstadoTemporal,
     establecerEstadoTemporal,
     establecerDatosTransferencia,
-    obtenerDatosTransferencia
+    obtenerDatosTransferencia,
+    establecerNombreNegocio,
+    establecerPropietario,
+    obtenerPropietarios
 };

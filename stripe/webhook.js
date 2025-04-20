@@ -1,8 +1,8 @@
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
-const { OWNER_NUMBERS } = require('../config');
 const pedidosDB = require('../firebase/pedidos');
+const configuracionDB = require('../firebase/configuracion');
 const moment = require('moment');
 require('moment/locale/es'); // Cargar idioma español
 // Middleware para parsear el cuerpo raw
@@ -78,7 +78,8 @@ async function handlePaymentSuccess(session) {
         });
 
         // 2. Enviar mensaje a negocio
-        for (const numero of OWNER_NUMBERS) {
+        const propietarios = await configuracionDB.obtenerPropietarios();
+        for (const numero of propietarios) {
             await mensajesDB.agregarMensajeEnCola({
                 numero: numero,
                 mensaje: mensajeConfirmacionNegocio

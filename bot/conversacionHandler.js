@@ -1,4 +1,3 @@
-const { OWNER_NUMBERS } = require('../config');
 const { cargarComandos } = require('../services/botService');
 const comandos = cargarComandos();
 const productosDB = require('../firebase/productos');
@@ -7,7 +6,7 @@ const { db } = require('../firebase/firebase');
 const { getHorarios } = require('../utils/getHorarios');
 const moment = require('moment');
 const { guardarEstadoConversacion, recuperarEstadoConversacion } = require('../firebase/conversacionEstados');
-
+const configuracionDB = require('../firebase/configuracion');
 
 // // Estados en memoria para clientes
 // const estados = {}; // { '521234567890': 'esperando_producto' | 'esperando_confirmacion' }
@@ -57,7 +56,9 @@ async function manejarMensaje(message, chatId, send, client) {
     if (estados[numero] === 'esperando_confirmacion_pago') {
       return manejarConfirmacionPago(texto, numero, send); // Nueva función específica
     }
-    const esAdmin = OWNER_NUMBERS.includes(numero);
+
+    const propietarios = await configuracionDB.obtenerPropietarios();
+    const esAdmin = propietarios.includes(numero);
     console.log('Número:', numero, 'Texto:', texto, 'Es admin:', esAdmin);
 
 

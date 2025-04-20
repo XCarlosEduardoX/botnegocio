@@ -2,12 +2,12 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { manejarMensaje } = require('./conversacionHandler');
 const { db } = require('../firebase/firebase');
-const { OWNER_NUMBERS } = require('../config');
 const { getCierreTemporal } = require('../utils/getCierreTemporal');
 const cron = require('node-cron');
 global.estados = {};
 global.carritos = {};
 global.mensajesPineados = {};
+const configuracionDB = require('../firebase/configuracion');
 
 
 const client = new Client({ authStrategy: new LocalAuth(), puppeteer: { headless: true } });
@@ -94,8 +94,9 @@ async function limpiarEstadosAntiguos() {
 async function recordarCierreTemporal() {
   const cierreTemporal = await getCierreTemporal();
   if (cierreTemporal) {
+    const propietarios = await configuracionDB.obtenerPropietarios();
     const mensaje = `⚠️ ¡Cierre Temporal Activado! ⚠️\n\n No estas aceptando pedidos en estos momentos.`;
-    OWNER_NUMBERS.forEach(async (number) => {
+    propietarios.forEach(async (number) => {
       let numberOwner = number + '@c.us';
       await client.sendMessage(numberOwner, mensaje);
     });
@@ -108,10 +109,6 @@ async function recordarCierreTemporal() {
 // 2. Manejo de mensajes entrantes
 client.on('message', async (message) => {
   if (message.fromMe || message.from.includes('@g.us')) return;
-  // const esAdmin = OWNER_NUMBERS.includes(message.from);
-  // if (!esAdmin) {
-
-  // }
 
   await manejarMensaje(
     message,
