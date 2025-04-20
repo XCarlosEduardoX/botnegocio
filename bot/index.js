@@ -3,8 +3,8 @@ const qrcode = require('qrcode-terminal');
 const { manejarMensaje } = require('./conversacionHandler');
 const { db } = require('../firebase/firebase');
 const { BUSSINESS_NUMBER, OWNER_NUMBERS } = require('../config');
-const { getHorarios } = require('../utils/getHorarios');
-const moment = require('moment');
+const { getCierreTemporal } = require('../utils/getCierreTemporal');
+const cron = require('node-cron');
 
 const client = new Client({ authStrategy: new LocalAuth() });
 
@@ -15,12 +15,32 @@ client.on('ready', () => {
   iniciarProcesadorDeCola(); // <- Inicia el procesamiento de mensajes pendientes
 });
 
+//cada minuto
+cron.schedule('* * * * *', async () => {
+  await recordarCierreTemporal();
+
+});
+
+async function recordarCierreTemporal() {
+  const cierreTemporal = await getCierreTemporal();
+  if (cierreTemporal) {
+    const mensaje = `⚠️ ¡Cierre Temporal Activado! ⚠️\n\n No estas aceptando pedidos en estos momentos.`;
+    OWNER_NUMBERS.forEach(async (number) => {
+      let numberOwner = number + '@c.us';
+      await client.sendMessage(numberOwner, mensaje);
+    });
+  }
+}
+
+
+
+
 // 2. Manejo de mensajes entrantes
 client.on('message', async (message) => {
   if (message.fromMe || message.from.includes('@g.us')) return;
   // const esAdmin = OWNER_NUMBERS.includes(message.from);
   // if (!esAdmin) {
-   
+
   // }
 
   await manejarMensaje(
@@ -54,7 +74,7 @@ async function procesarMensajesPendientes() {
         });
         console.log(`✅ Mensaje enviado a ${numero}`);
       } catch (error) {
-        console.error(`❌ Error al enviar a ${numero}:`, error.message);
+        console.error(`❌ Error al enviar a ${numero}: `, error.message);
         await manejarErrorEnvio(doc.ref, error);
       }
     });
