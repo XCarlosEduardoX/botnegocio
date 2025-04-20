@@ -93,4 +93,39 @@ async function establecerEstadoTemporal(estado) {
         cerradoTemporalmente: estado
     }, { merge: true });
 }
-module.exports = { agregarMensajeBienvenida, establecerHorarios, establecerDireccion, establecerTiposEntrega, obtenerHorarios, obtenerEstadoTemporal, establecerEstadoTemporal };
+
+async function establecerDatosTransferencia(datos) {
+    const docRef = db.collection('negocios')
+        .doc(BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
+
+    await docRef.set({
+        datosTransferencia: datos
+    }, { merge: true });
+}
+
+//obtener datos de transferencia
+async function obtenerDatosTransferencia() {
+    const docRef = db.collection('negocios')
+        .doc(BUSSINESS_NUMBER)
+        .collection('configuracion')
+        .doc('configuracion');
+
+    const doc = await docRef.get();
+    if (!doc.exists) return null;
+
+    return doc.data().datosTransferencia || null;
+}
+
+module.exports = {
+    agregarMensajeBienvenida,
+    establecerHorarios,
+    establecerDireccion,
+    establecerTiposEntrega,
+    obtenerHorarios,
+    obtenerEstadoTemporal,
+    establecerEstadoTemporal,
+    establecerDatosTransferencia,
+    obtenerDatosTransferencia
+};

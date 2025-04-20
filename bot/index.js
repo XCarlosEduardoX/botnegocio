@@ -5,13 +5,41 @@ const { db } = require('../firebase/firebase');
 const { BUSSINESS_NUMBER, OWNER_NUMBERS } = require('../config');
 const { getCierreTemporal } = require('../utils/getCierreTemporal');
 const cron = require('node-cron');
+global.estados = {};
+global.carritos = {};
+global.mensajesPineados = {};
+
 
 const client = new Client({ authStrategy: new LocalAuth() });
 
 // 1. Inicialización del bot
 client.on('qr', qr => qrcode.generate(qr, { small: true }));
-client.on('ready', () => {
+client.on('ready', async () => {
   console.log('Bot listo ✅');
+  try {
+    const conversacionesRef = db
+      .collection('negocios')
+      .doc(BUSSINESS_NUMBER)
+      .collection('conversaciones');
+
+    const snapshot = await conversacionesRef.get();
+
+    snapshot.forEach(doc => {
+      const numero = doc.id;
+      const data = doc.data();
+
+      // Restaurar estado y carrito en memoria
+      if (data.estado) {
+        estados[numero] = data.estado;
+        carritos[numero] = data.carrito || [];
+      }
+    });
+
+    console.log('Estados de conversación recuperados ✅');
+  } catch (error) {
+    console.error('Error al recuperar estados:', error);
+  }
+
   iniciarProcesadorDeCola(); // <- Inicia el procesamiento de mensajes pendientes
 });
 
@@ -20,6 +48,42 @@ cron.schedule('* * * * *', async () => {
   await recordarCierreTemporal();
 
 });
+
+// Limpiar estados antiguos cada 12 horas
+cron.schedule('0 */12 * * *', () => {
+  limpiarEstadosAntiguos();
+});
+
+
+async function limpiarEstadosAntiguos() {
+  const TIEMPO_MAXIMO = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+  const limiteTiempo = new Date(Date.now() - TIEMPO_MAXIMO);
+
+  try {
+    const snapshot = await db
+      .collection('negocios')
+      .doc(BUSSINESS_NUMBER)
+      .collection('conversaciones')
+      .where('ultimaActualizacion', '<', limiteTiempo)
+      .get();
+
+    const batch = db.batch();
+
+    snapshot.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+
+    if (!snapshot.empty) {
+      await batch.commit();
+      console.log(`Se eliminaron ${snapshot.size} conversaciones antiguas.`);
+    } else {
+      console.log('No hay conversaciones antiguas para eliminar.');
+    }
+  } catch (error) {
+    console.error('Error al limpiar estados antiguos:', error);
+  }
+}
+
 
 async function recordarCierreTemporal() {
   const cierreTemporal = await getCierreTemporal();

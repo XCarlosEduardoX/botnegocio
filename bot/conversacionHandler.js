@@ -6,16 +6,36 @@ const { crearLinkDePago } = require('../stripe/stripe');
 const { db } = require('../firebase/firebase');
 const { getHorarios } = require('../utils/getHorarios');
 const moment = require('moment');
-// Estados en memoria para clientes
-const estados = {}; // { '521234567890': 'esperando_producto' | 'esperando_confirmacion' }
-const carritos = {}; // { '521234567890': [{ nombre, cantidad, precio }] }
-const mensajesPineados = {}; // { '521234567890': messageId }
+const { guardarEstadoConversacion, recuperarEstadoConversacion } = require('../firebase/conversacionEstados');
+
+
+// // Estados en memoria para clientes
+// const estados = {}; // { '521234567890': 'esperando_producto' | 'esperando_confirmacion' }
+// const carritos = {}; // { '521234567890': [{ nombre, cantidad, precio }] }
+// const mensajesPineados = {}; // { '521234567890': messageId }
 const { getCierreTemporal } = require('../utils/getCierreTemporal');
 
 async function manejarMensaje(message, chatId, send, client) {
   try {
     const texto = message.body.trim();
     const numero = chatId.replace('@c.us', '');
+    if (!carritos[numero]) {
+      carritos[numero] = [];
+    }
+    if (!estados[numero]) {
+      const estadoGuardado = await recuperarEstadoConversacion(numero);
+      if (estadoGuardado) {
+        estados[numero] = estadoGuardado.estado;
+        carritos[numero] = estadoGuardado.carrito || [];
+      } else {
+        // Si no hay estado guardado, inicializar con valores por defecto
+        estados[numero] = 'esperando_producto';
+        carritos[numero] = [];
+        // Guardar estado inicial en Firebase
+        await guardarEstadoConversacion(numero, estados[numero], carritos[numero]);
+      }
+    }
+
     if (estados[numero] === 'esperando_metodo_pago') {
       return manejarMetodoPago(texto, numero, send);
     }
@@ -110,6 +130,7 @@ async function manejarMensaje(message, chatId, send, client) {
       }
       return await comandos[comandoNombre].execute({ args, send });
     }
+    await guardarEstadoConversacion(numero, estados[numero], carritos[numero]);
 
     if (!esAdmin) {
       return manejarCliente(message, numero, send, client);
@@ -120,6 +141,7 @@ async function manejarMensaje(message, chatId, send, client) {
     console.error('Error en manejarMensaje:', error);
     send('⚠️ Ocurrió un error al procesar tu mensaje.');
   }
+
 }
 
 async function manejarCliente(message, chatId, send, client) {
@@ -175,7 +197,7 @@ async function manejarSeleccionProducto(texto, numero, send, client) {
   }
 
   // 2. Buscar producto (insensible a mayúsculas/espacios)
-  const producto = productos.find(p =>
+  let producto = productos.find(p =>
     p.nombre.toLowerCase().replace(/\s+/g, ' ') === nombreInput
   );
 
@@ -262,6 +284,7 @@ async function manejarSeleccionProducto(texto, numero, send, client) {
 
 
   estados[numero] = 'esperando_confirmacion';
+  await guardarEstadoConversacion(numero, estados[numero], carritos[numero]);
   return send('✅ Producto agregado al carrito. ¿Quieres terminar o agregar más?\nEscribe *agregar* o *terminar*');
 }
 
@@ -332,23 +355,37 @@ async function manejarMetodoPago(texto, numero, send) {
 
   }
   else if (metodo.includes('transferencia') || metodo === '2') {
-    // Guardar pedido en Firebase como "pendiente de pago"
-    const pedidosDB = require('../firebase/pedidos');
-    await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'transferencia');
+    try {
+      // Obtener los datos de transferencia de la configuración
+      const configuracionDB = require('../firebase/configuracion');
+      const datosTransferencia = await configuracionDB.obtenerDatosTransferencia();
 
-    await send(
-      '📤 *Datos para transferencia:*\n\n' +
-      '• Banco: BBVA\n' +
-      '• CLABE: 0123 4567 8910\n' +
-      '• Envía comprobante aquí\n\n' +
-      '📦 *Tu pedido:*\n' +
-      generarResumenCarrito(carritos[numero])
-    );
+      if (!datosTransferencia) {
+        return await send('❌ Los datos de transferencia no están configurados. Por favor contacta al administrador.');
+      }
 
-    // Limpiar todo
-    carritos[numero] = [];
-    estados[numero] = null;
+      // Guardar pedido en Firebase como "pendiente de pago"
+      const pedidosDB = require('../firebase/pedidos');
+      await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'transferencia');
 
+      await send(
+        '📤 *Datos para transferencia:*\n\n' +
+        `• Banco: ${datosTransferencia.banco}\n` +
+        `• Cuenta: ${datosTransferencia.numeroCuenta}\n` +
+        `• Titular: ${datosTransferencia.titular}\n\n` +
+        '⚠️ *Importante:* Envía el comprobante por este chat\n\n' +
+        '📦 *Tu pedido:*\n' +
+        generarResumenCarrito(carritos[numero])
+      );
+
+      // Limpiar carrito y estado
+      carritos[numero] = [];
+      estados[numero] = null;
+
+    } catch (error) {
+      console.error('Error al procesar pago por transferencia:', error);
+      await send('❌ Ocurrió un error. Por favor intenta nuevamente.');
+    }
   }
   else if (metodo.includes('tarjeta') || metodo.includes('oxxo') || metodo === '3') {
     try {
