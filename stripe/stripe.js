@@ -2,7 +2,7 @@
 const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const crearLinkDePago = async (carrito, idPedido, numeroCliente) => {
+const crearLinkDePago = async (carrito, idPedido, numeroCliente, dominio) => {
     console.log('numeroCliente:', numeroCliente);
     try {
         const line_items = carrito.map(producto => ({
@@ -22,8 +22,8 @@ const crearLinkDePago = async (carrito, idPedido, numeroCliente) => {
             payment_method_types: ['card', 'oxxo',],
             line_items,
             mode: 'payment',
-            success_url: 'https://tutienda.com/pago-exitoso?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url: 'https://tutienda.com/pago-cancelado',
+            success_url: `${process.env.DOMAIN}/pago-exitoso?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.DOMAIN}/pago-cancelado`,
             metadata: { // Útil para identificar el pedido después
                 cliente: numeroCliente,
                 carrito: JSON.stringify(carrito.map(item => `${item.nombre} x${item.cantidad}`)),
