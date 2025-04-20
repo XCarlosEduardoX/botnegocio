@@ -10,7 +10,7 @@ global.carritos = {};
 global.mensajesPineados = {};
 
 
-const client = new Client({ authStrategy: new LocalAuth() });
+const client = new Client({ authStrategy: new LocalAuth(), puppeteer: { headless: true } });
 
 // 1. Inicialización del bot
 client.on('qr', qr => qrcode.generate(qr, { small: true }));
