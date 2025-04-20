@@ -1,4 +1,3 @@
-// agregarVariosProductos.js
 module.exports = {
     name: 'agregar varios',
     adminOnly: true,
@@ -8,7 +7,10 @@ module.exports = {
         const resultados = [];
 
         for (const producto of productos) {
-            const [nombre, precio] = producto.split(' ');
+            // Tomar el último elemento como precio y el resto como nombre
+            const partes = producto.split(' ');
+            const precio = partes.pop();
+            const nombre = partes.join(' ');
             const precioNum = parseInt(precio);
 
             if (nombre && !isNaN(precioNum)) {

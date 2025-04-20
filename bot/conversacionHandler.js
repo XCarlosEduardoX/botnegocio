@@ -95,9 +95,14 @@ async function manejarMensaje(message, chatId, send, client) {
         );
       }
     }
-    const [comandoRaw, ...argsRaw] = texto.split('|');
-    const comandoNombre = comandoRaw.trim().toLowerCase();
-    const args = argsRaw.join('|').trim();
+    if (texto.startsWith('agregar varios')) {
+      comandoNombre = 'agregar varios';
+      args = texto.replace('agregar varios', '').trim();
+    } else {
+      const [comandoRaw, ...argsRaw] = texto.split('|');
+      comandoNombre = comandoRaw.trim().toLowerCase();
+      args = argsRaw.join('|').trim();
+    }
 
     if (comandos[comandoNombre]) {
       if (comandos[comandoNombre].adminOnly && !esAdmin) {
