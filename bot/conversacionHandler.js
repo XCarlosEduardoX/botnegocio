@@ -19,6 +19,20 @@ async function manejarMensaje(message, chatId, send, client) {
   try {
     const texto = message.body.trim();
     const numero = chatId.replace('@c.us', '');
+
+    if (texto === 'cancelar') {
+      // Si hay un link de pago pendiente (estado esperando_confirmacion_pago)
+      if (estados[numero] === 'esperando_confirmacion_pago') {
+        // Aquí podrías agregar lógica adicional para cancelar el link de pago si es necesario
+        const pedidosDB = require('../firebase/pedidos');
+        await pedidosDB.actualizarEstatusPedido(pedidoActualId, 'cancelado');
+      }
+
+      return await cancelarPedido(numero, send);
+    }
+
+
+
     if (!carritos[numero]) {
       carritos[numero] = [];
     }
@@ -283,6 +297,7 @@ async function manejarSeleccionProducto(texto, numero, send, client) {
 
 
 
+
   estados[numero] = 'esperando_confirmacion';
   await guardarEstadoConversacion(numero, estados[numero], carritos[numero]);
   return send('✅ Producto agregado al carrito. ¿Quieres terminar o agregar más?\nEscribe *agregar* o *terminar*');
@@ -327,7 +342,10 @@ async function manejarConfirmacionCompra(texto, numero, send) {
       estados[numero] = 'esperando_metodo_pago'; // Cambiar estado directamente aquí
       return await send(resumen);
     }
-    else {
+    else if (mensaje.includes('cancelar') || mensaje.includes('cancela') && mensaje.includes('cancelar') || mensaje.includes('cancela') && mensaje.includes('cancela')) {
+
+      await cancelarPedido(numero, send);
+    } else {
       return await send('❌ Opción no válida. Por favor escribe *agregar* o *terminar*.');
     }
   }
@@ -335,90 +353,92 @@ async function manejarConfirmacionCompra(texto, numero, send) {
 
 async function manejarMetodoPago(texto, numero, send) {
   const metodo = texto.trim().toLowerCase();
-
-  if (metodo.includes('efectivo') || metodo === '1') {
-    // Guardar pedido en Firebase como "pendiente de pago"
-    const pedidosDB = require('../firebase/pedidos');
-    await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'efectivo');
-
-    await send(
-      '💰 *Pago en efectivo registrado*\n\n' +
-      'Por favor paga al recibir tu pedido.\n\n' +
-      '📦 *Tu pedido:*\n' +
-      generarResumenCarrito(carritos[numero]) +
-      '\n\n¿Necesitas algo más?'
-    );
-
-    // Limpiar todo
-    carritos[numero] = [];
-    estados[numero] = null;
-
-  }
-  else if (metodo.includes('transferencia') || metodo === '2') {
-    try {
-      // Obtener los datos de transferencia de la configuración
-      const configuracionDB = require('../firebase/configuracion');
-      const datosTransferencia = await configuracionDB.obtenerDatosTransferencia();
-
-      if (!datosTransferencia) {
-        return await send('❌ Los datos de transferencia no están configurados. Por favor contacta al administrador.');
-      }
-
+  if (metodo === 'cancelar' || metodo === 'cancela' && texto.includes('cancelar') || metodo === 'cancela' && texto.includes('cancela')) {
+    return await cancelarPedido(numero, send);
+  } else
+    if (metodo.includes('efectivo') || metodo === '1') {
       // Guardar pedido en Firebase como "pendiente de pago"
       const pedidosDB = require('../firebase/pedidos');
-      await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'transferencia');
+      await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'efectivo');
 
       await send(
-        '📤 *Datos para transferencia:*\n\n' +
-        `• Banco: ${datosTransferencia.banco}\n` +
-        `• Cuenta: ${datosTransferencia.numeroCuenta}\n` +
-        `• Titular: ${datosTransferencia.titular}\n\n` +
-        '⚠️ *Importante:* Envía el comprobante por este chat\n\n' +
+        '💰 *Pago en efectivo registrado*\n\n' +
+        'Por favor paga al recibir tu pedido.\n\n' +
         '📦 *Tu pedido:*\n' +
-        generarResumenCarrito(carritos[numero])
-      );
-
-      // Limpiar carrito y estado
-      carritos[numero] = [];
-      estados[numero] = null;
-
-    } catch (error) {
-      console.error('Error al procesar pago por transferencia:', error);
-      await send('❌ Ocurrió un error. Por favor intenta nuevamente.');
-    }
-  }
-  else if (metodo.includes('tarjeta') || metodo.includes('oxxo') || metodo === '3') {
-    try {
-      const pedidosDB = require('../firebase/pedidos');
-      const docRef = await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'tarjeta');
-
-      const linkPago = await crearLinkDePago(carritos[numero], docRef.id, numero);
-
-      await send(
-        '🔗 *Link de pago (Stripe):*\n' +
-        linkPago + '\n\n' +
-        '⚠️ Válido por 24 horas\n' +
-        'Para Oxxo: Selecciona "Pago en efectivo" en el checkout'
+        generarResumenCarrito(carritos[numero]) +
+        '\n\n¿Necesitas algo más?'
       );
 
       // Limpiar todo
       carritos[numero] = [];
       estados[numero] = null;
 
-    } catch (error) {
-      console.error(error);
-      await send('❌ Error al generar el pago. Intenta nuevamente.');
     }
-  }
-  else {
-    await send(
-      '❌ *Método no válido*\n\n' +
-      'Escribe:\n' +
-      '1. 💵 Efectivo\n' +
-      '2. 📤 Transferencia\n' +
-      '3. 💳 Tarjeta/Oxxo'
-    );
-  }
+    else if (metodo.includes('transferencia') || metodo === '2') {
+      try {
+        // Obtener los datos de transferencia de la configuración
+        const configuracionDB = require('../firebase/configuracion');
+        const datosTransferencia = await configuracionDB.obtenerDatosTransferencia();
+
+        if (!datosTransferencia) {
+          return await send('❌ Los datos de transferencia no están configurados. Por favor contacta al administrador.');
+        }
+
+        // Guardar pedido en Firebase como "pendiente de pago"
+        const pedidosDB = require('../firebase/pedidos');
+        await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'transferencia');
+
+        await send(
+          '📤 *Datos para transferencia:*\n\n' +
+          `• Banco: ${datosTransferencia.banco}\n` +
+          `• Cuenta: ${datosTransferencia.numeroCuenta}\n` +
+          `• Titular: ${datosTransferencia.titular}\n\n` +
+          '⚠️ *Importante:* Envía el comprobante por este chat\n\n' +
+          '📦 *Tu pedido:*\n' +
+          generarResumenCarrito(carritos[numero])
+        );
+
+        // Limpiar carrito y estado
+        carritos[numero] = [];
+        estados[numero] = null;
+
+      } catch (error) {
+        console.error('Error al procesar pago por transferencia:', error);
+        await send('❌ Ocurrió un error. Por favor intenta nuevamente.');
+      }
+    }
+    else if (metodo.includes('tarjeta') || metodo.includes('oxxo') || metodo === '3') {
+      try {
+        const pedidosDB = require('../firebase/pedidos');
+        const docRef = await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'tarjeta');
+
+        const linkPago = await crearLinkDePago(carritos[numero], docRef.id, numero);
+
+        await send(
+          '🔗 *Link de pago (Stripe):*\n' +
+          linkPago + '\n\n' +
+          '⚠️ Válido por 24 horas\n' +
+          'Para Oxxo: Selecciona "Pago en efectivo" en el checkout'
+        );
+
+        // Limpiar todo
+        carritos[numero] = [];
+        estados[numero] = null;
+
+      } catch (error) {
+        console.error(error);
+        await send('❌ Error al generar el pago. Intenta nuevamente.');
+      }
+    }
+    else {
+      await send(
+        '❌ *Método no válido*\n\n' +
+        'Escribe:\n' +
+        '1. 💵 Efectivo\n' +
+        '2. 📤 Transferencia\n' +
+        '3. 💳 Tarjeta/Oxxo'
+      );
+    }
 }
 
 
@@ -600,5 +620,28 @@ async function verificarSiEsNuevoCliente(numero) {
 }
 
 
+async function cancelarPedido(numero, send) {
+  try {
+    // Limpiar carrito
+    carritos[numero] = [];
 
+    // Resetear estado
+    estados[numero] = 'esperando_producto';
+
+    // Guardar el nuevo estado en Firebase
+    await guardarEstadoConversacion(numero, estados[numero], carritos[numero]);
+
+    // Enviar mensaje de confirmación
+    await send('🚫 Pedido cancelado. Mostrando productos disponibles:');
+
+    // Mostrar productos nuevamente
+    await enviarListaDeProductos(numero, send);
+
+    return true;
+  } catch (error) {
+    console.error('Error al cancelar pedido:', error);
+    await send('⚠️ Ocurrió un error al cancelar el pedido.');
+    return false;
+  }
+}
 module.exports = { manejarMensaje };
