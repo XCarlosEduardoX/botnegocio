@@ -10,7 +10,7 @@ const moment = require('moment');
 const estados = {}; // { '521234567890': 'esperando_producto' | 'esperando_confirmacion' }
 const carritos = {}; // { '521234567890': [{ nombre, cantidad, precio }] }
 const mensajesPineados = {}; // { '521234567890': messageId }
-
+const { getCierreTemporal } = require('../utils/getCierreTemporal');
 
 async function manejarMensaje(message, chatId, send, client) {
   try {
@@ -28,6 +28,12 @@ async function manejarMensaje(message, chatId, send, client) {
 
 
     if (!esAdmin) {
+      const cierreTemporal = await getCierreTemporal();
+      if (cierreTemporal) {
+        return send('🔒 El negocio está cerrado temporalmente. No se aceptan pedidos en estos momentos');
+      }
+
+
       const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
       const diaActual = diasSemana[new Date().getDay()];
       const horaActual = new Date().getHours();
