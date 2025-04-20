@@ -13,8 +13,13 @@ global.mensajesPineados = {};
 const client = new Client({ authStrategy: new LocalAuth(), puppeteer: { headless: true } });
 
 // 1. Inicialización del bot
-client.on('qr', qr => qrcode.generate(qr, { small: true }));
-client.on('ready', async () => {
+
+client.on('qr', qr => {
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qr)}`;
+  console.log('🔗 Escanea el código QR aquí:');
+  console.log(qrUrl);
+  open(qrUrl); // abre el navegador automáticamente
+}); client.on('ready', async () => {
   console.log('Bot listo ✅');
   try {
     const conversacionesRef = db
