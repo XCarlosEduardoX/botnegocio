@@ -342,7 +342,7 @@ async function manejarConfirmacionCompra(texto, numero, send) {
       resumen += '💳 *Selecciona tu método de pago:*\n\n';
       resumen += '1. 💵 Efectivo\n';
       resumen += '2. 📤 Transferencia\n';
-      resumen += '3. 💳 Tarjeta/Oxxo\n\n';
+      resumen += '3. 💳 Tarjeta\n\n';
       resumen += 'Escribe el número o nombre del método:';
 
       estados[numero] = 'esperando_metodo_pago'; // Cambiar estado directamente aquí
@@ -413,18 +413,20 @@ async function manejarMetodoPago(texto, numero, send) {
         await send('❌ Ocurrió un error. Por favor intenta nuevamente.');
       }
     }
-    else if (metodo.includes('tarjeta') || metodo.includes('oxxo') || metodo === '3') {
+    else if (metodo.includes('tarjeta') || metodo === '3') {
       try {
         const pedidosDB = require('../firebase/pedidos');
         const docRef = await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'tarjeta');
-
+        console.log('1:', docRef);
         const linkPago = await crearLinkDePago(carritos[numero], docRef.id, numero);
 
         await send(
           '🔗 *Link de pago (Stripe):*\n' +
           linkPago + '\n\n' +
           '⚠️ Válido por 24 horas\n' +
-          'Para Oxxo: Selecciona "Pago en efectivo" en el checkout'
+          '• Aceptamos todas las tarjetas\n' +
+          'Escribe *cancelar* o *cancela* para cancelar el pedido.'
+
         );
 
         // Limpiar todo
@@ -442,7 +444,7 @@ async function manejarMetodoPago(texto, numero, send) {
         'Escribe:\n' +
         '1. 💵 Efectivo\n' +
         '2. 📤 Transferencia\n' +
-        '3. 💳 Tarjeta/Oxxo'
+        '3. 💳 Tarjeta'
       );
     }
 }
@@ -463,7 +465,7 @@ async function manejarConfirmacionPago(texto, numero, send) {
           '💳 *Selecciona tu método de pago:*\n\n' +
           '1. 💵 Efectivo\n' +
           '2. 📤 Transferencia\n' +
-          '3. 💳 Tarjeta/Oxxo (Pago en línea)\n\n' +
+          '3. 💳 Tarjeta (Pago en línea)\n\n' +
           'Escribe el número o nombre del método:'
         );
       }
@@ -491,20 +493,19 @@ async function manejarConfirmacionPago(texto, numero, send) {
           '⚠️ Envía el comprobante por este chat para validar tu pago.'
         );
 
-      } else if (metodo.includes('tarjeta') || metodo.includes('oxxo') || metodo === '3') {
+      } else if (metodo.includes('tarjeta') || metodo === '3') {
         // Guardar pedido en Firebase y generar link de pago
         const pedidosDB = require('../firebase/pedidos');
         const docRef = await pedidosDB.guardarPedidoEnDB(numero, carritos[numero]);
-
+        console.log('2:', docRef);
         const linkPago = await crearLinkDePago(carritos[numero], docRef.id, numero);
 
         await send(
-          '🔗 *Link de pago generado (Tarjeta/Oxxo):*\n' +
+          '🔗 *Link de pago generado (Tarjeta):*\n' +
           `${linkPago}\n\n` +
           '⚠️ *Instrucciones:*\n' +
           '• Válido por 24 horas\n' +
-          '• Aceptamos todas las tarjetas\n' +
-          '• Para pagar en Oxxo: selecciona "Pago en efectivo" en el checkout'
+          '• Aceptamos todas las tarjetas\n'
         );
 
         // Limpiar carrito y estado
@@ -516,7 +517,7 @@ async function manejarConfirmacionPago(texto, numero, send) {
           '❌ Método no reconocido. Por favor elige:\n\n' +
           '1. Efectivo\n' +
           '2. Transferencia\n' +
-          '3. Tarjeta/Oxxo'
+          '3. Tarjeta (Pago en línea)'
         );
       }
 
@@ -561,11 +562,11 @@ async function procesarMetodoPago(texto, numero, send) {
     );
     carritos[numero] = [];
 
-  } else if (metodo.includes('tarjeta') || metodo.includes('oxxo') || metodo === '3') {
+  } else if (metodo.includes('tarjeta') || metodo === '3') {
     try {
       const pedidosDB = require('../firebase/pedidos');
       const docRef = await pedidosDB.guardarPedidoEnDB(numero, carritos[numero]);
-
+      console.log('3:', docRef);
       const linkPago = await crearLinkDePago(carritos[numero], docRef.id, numero);
 
       await send(
@@ -589,7 +590,7 @@ async function procesarMetodoPago(texto, numero, send) {
       'Escribe:\n' +
       '1. 💵 Efectivo\n' +
       '2. 📤 Transferencia\n' +
-      '3. 💳 Tarjeta/Oxxo'
+      '3. 💳 Tarjeta'
     );
   }
 }

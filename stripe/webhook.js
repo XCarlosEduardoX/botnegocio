@@ -25,10 +25,10 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
     // 2. Maneja eventos relevantes
 
     switch (event.type) {
-        case 'payment_intent.succeeded':
+        case 'checkout.session.completed':
         case 'checkout.session.async_payment_succeeded':
             const session = event.data.object;
-            await handlePaymentSuccess(session);
+            if (session.payment_status === 'paid') await handlePaymentSuccess(session);
             break;
 
         case 'checkout.session.expired':
@@ -53,7 +53,9 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
 
 // Función para manejar pagos exitosos
 async function handlePaymentSuccess(session) {
+    console.log('handlePaymentSuccess:', session);
     const { cliente, docId } = session.metadata;
+
     const numeroWhatsApp = `${cliente}@c.us`;
 
     const mensajeConfirmacionCliente =
@@ -69,6 +71,7 @@ async function handlePaymentSuccess(session) {
 
 
     try {
+        console.log('webhook.js: handlePaymentSuccess:', docId);
         await pedidosDB.actualizarEstatusPedido(docId, 'pagado');
         // 1. Agregar a cola
         const mensajesDB = require('../firebase/mensajes');
