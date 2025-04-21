@@ -2,11 +2,13 @@ const { db } = require('./firebase');
 
 async function guardarPedidoEnDB(numero, carrito) {
     console.log('Guardando pedido en DB:', numero, carrito);
+
     const docRef = await db.collection('negocios').doc(process.env.BUSSINESS_NUMBER).collection('pedidos').add({
         cliente: numero,
         carrito,
         fecha: new Date().toISOString(),
-        estado: 'pendiente'
+        estado: 'pendiente',
+
     });
     return docRef; // <-- ¡Agregado!
 }

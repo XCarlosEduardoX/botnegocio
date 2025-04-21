@@ -5,6 +5,8 @@ const pedidosDB = require('../firebase/pedidos');
 const configuracionDB = require('../firebase/configuracion');
 const moment = require('moment');
 require('moment/locale/es'); // Cargar idioma español
+const { guardarEstadoConversacion } = require('../firebase/conversacionEstados');
+
 // Middleware para parsear el cuerpo raw
 router.post('/', express.raw({ type: 'application/json' }), async (req, res) => {
     const sig = req.headers['stripe-signature'];
@@ -58,6 +60,7 @@ async function handlePaymentSuccess(session) {
 
     const numeroWhatsApp = `${cliente}@c.us`;
 
+
     const mensajeConfirmacionCliente =
         '✅ *¡Pago confirmado!*\n\n' +
         `📦 Pedido: ${session.metadata.carrito}\n` +
@@ -71,8 +74,8 @@ async function handlePaymentSuccess(session) {
 
 
     try {
-        console.log('webhook.js: handlePaymentSuccess:', docId);
         await pedidosDB.actualizarEstatusPedido(docId, 'pagado');
+        await guardarEstadoConversacion(numeroWhatsApp, null, []); // Reiniciar estado de la conversación
         // 1. Agregar a cola
         const mensajesDB = require('../firebase/mensajes');
         await mensajesDB.agregarMensajeEnCola({

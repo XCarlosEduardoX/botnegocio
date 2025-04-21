@@ -358,6 +358,7 @@ async function manejarConfirmacionCompra(texto, numero, send) {
 }
 
 async function manejarMetodoPago(texto, numero, send) {
+  console.log('Manejando metodo de pago:', texto);
   const metodo = texto.trim().toLowerCase();
   if (metodo === 'cancelar' || metodo === 'cancela' && texto.includes('cancelar') || metodo === 'cancela' && texto.includes('cancela')) {
     return await cancelarPedido(numero, send);
@@ -394,12 +395,15 @@ async function manejarMetodoPago(texto, numero, send) {
         const pedidosDB = require('../firebase/pedidos');
         await pedidosDB.guardarPedidoEnDB(numero, carritos[numero], 'transferencia');
 
+
         await send(
           '📤 *Datos para transferencia:*\n\n' +
           `• Banco: ${datosTransferencia.banco}\n` +
           `• Cuenta: ${datosTransferencia.numeroCuenta}\n` +
           `• Titular: ${datosTransferencia.titular}\n\n` +
-          '⚠️ *Importante:* Envía el comprobante por este chat\n\n' +
+          `⚠️ *Importante:*\n\n ` +
+          `• Envía el comprobante al numero +${process.env.BUSSINESS_NUMBER} para validar tu pago.\n` +
+          `• Por favor, indica tu número de teléfono como referencia de pago: ${numero}.\n\n` +
           '📦 *Tu pedido:*\n' +
           generarResumenCarrito(carritos[numero])
         );
@@ -537,10 +541,11 @@ async function manejarConfirmacionPago(texto, numero, send) {
 }
 
 async function procesarMetodoPago(texto, numero, send) {
+  console.log('Procesando metodo de pago:', texto);
   const metodo = texto.trim().toLowerCase();
 
   if (metodo.includes('efectivo') || metodo === '1') {
-    estados[numero] = null; // ¡Importante! Resetear estado
+    estados[numero] = null; // ¡ImPor favor, indica tu número de teléfono como referencia de pagoante! Resetear estado
     await send(
       '💰 *Pago en efectivo registrado*\n\n' +
       'Por favor paga al recibir tu pedido.\n\n' +
@@ -556,7 +561,9 @@ async function procesarMetodoPago(texto, numero, send) {
       '📤 *Datos para transferencia:*\n\n' +
       '• Banco: BBVA\n' +
       '• CLABE: 0123 4567 8910\n' +
-      '• Envía comprobante aquí\n\n' +
+      `⚠️ *ImPor favor, indica tu número de teléfono como referencia de pagoante:*\n\n ` +
+      `• Envía el comprobante al numero +${process.env.BUSSINESS_NUMBER} para validar tu pago.\n` +
+      `• Por favor, indica tu número de teléfono como referencia de pago: ${numero}.\n\n` +
       '📦 *Tu pedido:*\n' +
       generarResumenCarrito(carritos[numero])
     );
@@ -651,4 +658,4 @@ async function cancelarPedido(numero, send) {
     return false;
   }
 }
-module.exports = { manejarMensaje };
+module.exports = { manejarMensaje, procesarMetodoPago };
